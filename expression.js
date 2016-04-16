@@ -17,6 +17,46 @@ var Expression = function(str) {
 	}
 };
 Expression.DEBUG = true;
+/**
+ * Minimizes a single variable over a given interval at a given step resolution.
+ */
+Expression.prototype.nmin = function(variable, low, high, step) {
+	var min = Infinity, x = 0;
+	var sub = {};
+	if (typeof step === "undefined") step = (high-low)/1000;
+	for (var i=low; i<=high; i+=step) {
+		sub[variable] = i;
+		var val = this.eval(sub);
+		if (val < min) {
+			min = val;
+			x = i;
+		}
+	}
+	return {
+		input: x,
+		value: min
+	};
+};
+/**
+ * Solves for a single variable over a given interval at a given step resolution.
+ */
+Expression.prototype.nsolve = function(variable, value, low, high, step) {
+	var min = Infinity, x = 0;
+	var sub = {};
+	if (typeof step === "undefined") step = (high-low)/1000;
+	for (var i=low; i<=high; i+=step) {
+		sub[variable] = i;
+		var val = this.eval(sub);
+		if (Math.abs(value-val) < min) {
+			min = Math.abs(value-val);
+			x = i;
+		}
+	}
+	return {
+		input: x,
+		error: min
+	};
+};
 Expression.prototype.eval = function(vars) {
 	var expr = this.clone();
 	
