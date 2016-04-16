@@ -6,9 +6,10 @@ var Demo = {
         y1: 10
     },
     wsize: 10,
-    expr: "(x-1)^2+3",
+    expr: "sin(x-t*6) * (sin(t*2)+2) + sin(t*1.5)",
     playing: true,
     t0: Date.now(),
+    t: 0,
 
     init: function() {
         Demo.canvas = document.createElement("canvas");
@@ -79,11 +80,17 @@ var Demo = {
                 y1: 10
             };
             Demo.wsize = 10;
+            Demo.screenDirty = true;
         }, false);
         document.getElementById("btnPlayPause").addEventListener("click", function(event){
             Demo.playing = !Demo.playing;
             this.innerHTML = Demo.playing ? "Stop" : "Play";
             Demo.t0 = Date.now();
+        }, false);
+        document.getElementById("btnList").addEventListener("click", function(event){
+            alert("function(# args): "+Object.keys(Expression.functionMap).map(function(key){
+                return key + "(" + Expression.functionMap[key].length + ")";
+            }).join(", "));
         }, false);
 
         //insert display into document
@@ -94,8 +101,9 @@ var Demo = {
         //screen refresh
         requestAnimationFrame(function step(){
             if (Demo.screenDirty) {
+                if (Demo.playing) Demo.t = (Date.now()-Demo.t0)/1000;
                 Demo.drawGraph(Demo.expr.substitute({
-                    t: (Date.now()-Demo.t0)/1000
+                    t: Demo.t
                 }));
                 Demo.screenDirty = false;
             }
