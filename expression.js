@@ -1,11 +1,77 @@
 var Expression = function(str) {
-	//fix implied multiply
+	if (typeof str === "string") {
+		//fix implied multiply
 
-	//parse expression
-	this.tokens = str.match(new RegExp(Expression.regex.token, "g"));
-	console.log(this.tokens);
-	this.tokens = Expression.infixToPostfix(this.tokens);
-	console.log(this.tokens);
+		//parse expression
+		this.tokens = str.match(new RegExp(Expression.regex.token, "g"));
+		if (Expression.DEBUG) console.log("infix: %s", this.tokens);
+		this.tokens = Expression.infixToPostfix(this.tokens);
+		if (Expression.DEBUG) console.log("postfix: %s", this.tokens);
+	}
+	else {
+		this.tokens = [];
+		var that = this;
+		str.forEach(function(token){
+			that.tokens.push(token);
+		});
+	}
+};
+Expression.DEBUG = true;
+Expression.prototype.eval = function(vars) {
+	var expr = this.clone();
+	
+	//optional variable substitution
+	if (typeof vars === "object") {
+		expr.tokens = expr.tokens.map(function(token){
+			if (vars.hasOwnProperty(token)) {
+				return vars[token];
+			}
+			return token;
+		});
+	}
+
+	//evaluate postfix expression
+	var stack = [];
+	expr.tokens.forEach(function(token){
+		if (Expression.regex.number.test(token)) {
+			stack.push(parseFloat(token));
+		}
+		else if (Expression.regex.operator.test(token)) {
+			if (stack.length < 2) throw new Error("Incomplete expression (not enough operands).");
+            var right = stack.pop();
+            var left = stack.pop();
+            var result = 0;
+            switch (token) {
+                case "-":
+                    result = left-right;
+                    break;
+                case "+":
+                    result = left+right;
+                    break;
+                case "/":
+                    result = left/right;
+                    break;
+                case "*":
+                    result = left*right;
+                    break;
+                case "^":
+                    result = Math.pow(left, right);
+                    break;
+                case "=":
+                    result = (left==right);
+                    break;
+            }
+            stack.push(result);
+		}
+		else if (Expression.regex.variable.test(token)) {
+			throw new Error("Symbolic operations not yet supported.");
+		}
+	});
+	if (stack.length !== 1) throw new Error("Incomplete expression (extra items on stack).");
+	return stack.pop();
+};
+Expression.prototype.clone = function() {
+	return new Expression(this.tokens);
 };
 Expression.regex = {
 	number: "((?:\\d*\\.)?\\d+)",
@@ -17,12 +83,13 @@ Expression.regex = {
 	Expression.regex.token = 
 		"" + Expression.regex.number +
 		"|" + Expression.regex.variable +
-		"|" + Expression.regex.operator;
+		"|" + Expression.regex.operator +
+		"|" + Expression.regex.parenthesis;
 	Object.keys(Expression.regex).forEach(function(key){
 		Expression.regex[key] = new RegExp(Expression.regex[key], "i");
 	});
 })();
-Expression.precedenceList = ["-","+","/","*","^","="];
+Expression.precedenceList = ["=","-","+","/","*","^"];
 Expression.getPrecedence = function(op) {
 	return Expression.precedenceList.indexOf(op);
 };
