@@ -16,51 +16,53 @@ var Expression = function(str) {
 		});
 	}
 };
-Expression.DEBUG = true;
+Expression.DEBUG = false;
+
+Expression.prototype.evalInterval = function(func, variable, low, high, step, initialData) {
+	var sub = {};
+	var data = typeof initialData === "undefined" ? {} : initialData;
+	if (typeof step === "undefined") step = (high-low)/1000;
+	for (var i=low; i<=high; i+=step) {
+		sub[variable] = i;
+		var val = this.eval(sub);
+		func(i, val, data);
+	}
+	return data;
+};
+
 /**
  * Minimizes a single variable over a given interval at a given step resolution.
  */
 Expression.prototype.nmin = function(variable, low, high, step) {
-	var min = Infinity, x = 0;
-	var sub = {};
-	if (typeof step === "undefined") step = (high-low)/1000;
-	for (var i=low; i<=high; i+=step) {
-		sub[variable] = i;
-		var val = this.eval(sub);
-		if (val < min) {
-			min = val;
-			x = i;
+	return this.evalInterval(function(i, val, data){
+		if (val < data.minVal) {
+			data.input = i;
+			data.minVal = val;
 		}
-	}
-	return {
-		input: x,
-		value: min
-	};
+	}, variable, low, high, step, {
+		input: 0,
+		minVal: Infinity
+	});
 };
+
 /**
  * Solves for a single variable over a given interval at a given step resolution.
  */
 Expression.prototype.nsolve = function(variable, value, low, high, step) {
-	var min = Infinity, x = 0;
-	var sub = {};
-	if (typeof step === "undefined") step = (high-low)/1000;
-	for (var i=low; i<=high; i+=step) {
-		sub[variable] = i;
-		var val = this.eval(sub);
-		if (Math.abs(value-val) < min) {
-			min = Math.abs(value-val);
-			x = i;
+	return this.evalInterval(function(i, val, data){
+		var error = Math.abs(val-value);
+		if (error < data.error) {
+			data.input = i;
+			data.error = error;
 		}
-	}
-	return {
-		input: x,
-		error: min
-	};
+	}, variable, low, high, step, {
+		input: 0,
+		error: Infinity
+	});
 };
-Expression.prototype.eval = function(vars) {
+
+Expression.prototype.substitute = function(vars) {
 	var expr = this.clone();
-	
-	//optional variable substitution
 	if (typeof vars === "object") {
 		expr.tokens = expr.tokens.map(function(token){
 			if (vars.hasOwnProperty(token)) {
@@ -69,6 +71,12 @@ Expression.prototype.eval = function(vars) {
 			return token;
 		});
 	}
+	return expr;
+};
+
+Expression.prototype.eval = function(vars) {
+	//optional variable substitution
+	var expr = this.substitute(vars);
 
 	//evaluate postfix expression
 	var stack = [];
@@ -120,7 +128,7 @@ Expression.regex = {
 	parenthesis: "[()]"
 };
 (function(){
-	Expression.regex.token = 
+	Expression.regex.token =
 		"" + Expression.regex.number +
 		"|" + Expression.regex.variable +
 		"|" + Expression.regex.operator +
