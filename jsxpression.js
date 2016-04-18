@@ -1,6 +1,7 @@
 var Expression = function(str, b) {
 	if (typeof str === "string") {
 		//fix implied multiply
+		str = str.replace(new RegExp(Expression.regex.impliedMultiply, "g"), "$1*$2");
 
 		//parse expression
 		this.tokens = str.match(new RegExp(Expression.regex.token, "g"));
@@ -169,7 +170,7 @@ Expression.prototype.clone = function() {
  * Contains patterns that match various types of tokens.
  */
 Expression.regex = {
-	number: "((?:\\d*\\.)?\\d+)",
+	number: "(?:(?:\\d*\\.)?\\d+)",
 	funct: "\\w{2,}(?=\\()",
 	functname: "\\w{2,}", //function names require 2+ characters for now to be distinct from variables
 	variable: "\\w{1}",
@@ -184,6 +185,9 @@ Expression.regex = {
 		"|" + Expression.regex.variable +
 		"|" + Expression.regex.operator +
 		"|" + Expression.regex.parenthesis;
+	Expression.regex.impliedMultiply =
+		"(" + Expression.regex.number + ")" +
+		"(" + Expression.regex.variable + ")";
 	Object.keys(Expression.regex).forEach(function(key){
 		Expression.regex[key] = new RegExp(Expression.regex[key], "i");
 	});
