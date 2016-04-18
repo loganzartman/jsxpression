@@ -4,38 +4,24 @@
 	<title>JSXpression Demo</title>
 	<script src="jsxpression.js"></script>
 	<script src="demo.js"></script>
-	<style type="text/css">
-	.info {
-		font-family: sans-serif;
-		font-size: 10pt;
-		margin-top: 1em;
-		margin-bottom: 0.5em;
-		opacity: 0.7;
-	}
-	.exprinpt {
-		font-family: monospace;
-		font-size: 12pt;
-		width: 500px;
-	}
-	button {
-		font-family: monospace;
-	}
-	</style>
+	<link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+	<link href="style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
 	<div style="height: 4em;"></div>
-	<center>
+	<div class="center">
+		<h2>JSXpression demo</h2>
 		<div id="displayarea"></div>
 		<div class="info">
 			Click and drag to move.  Scroll to zoom.
 		</div>
-		<div>
+		<div class="ui noselect">
 			<input type="text" id="textbox" class="exprinpt"/><br>
 			<button id="btnStore">Update</button>
 			<button id="btnReset">Reset View</button>
 			<button id="btnPlayPause">Stop</button>
 			<button id="btnList">List Functions</button>
 		</div>
-	</center>
+	</div>
 </body>
 </html>

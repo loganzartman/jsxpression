@@ -6,15 +6,15 @@ var Demo = {
         y1: 10
     },
     wsize: 10,
-    expr: "sin(x-t*6) * (sin(t*2)+2) + sin(t*1.5)",
+    expr: "sin(x+t) + cos(3^(1/2)*(x-t))",
     playing: true,
     t0: Date.now(),
     t: 0,
 
     init: function() {
         Demo.canvas = document.createElement("canvas");
-        Demo.canvas.width = 500;
-        Demo.canvas.height = 500;
+        Demo.canvas.width = 700;
+        Demo.canvas.height = 700;
 
         //Interactive dragging
         Demo.canvas.addEventListener("mousedown", function(event){
@@ -65,11 +65,15 @@ var Demo = {
         //controls
         document.getElementById("btnStore").addEventListener("click", function(){
             try {
-                Demo.expr = new Expression(document.getElementById("textbox").value);
+                var val = document.getElementById("textbox").value;
+                var expr = new Expression(val);
+                expr.eval({x: 0, t: 0});
+                Demo.expr = expr;
                 Demo.t0 = Date.now();
+                document.location.hash = btoa(val);
             }
             catch (e) {
-                alert("Error parsing expression:" + e);
+                alert("There was a problem parsing your expression.\n" + e);
             }
         }, false);
         document.getElementById("btnReset").addEventListener("click", function(){
@@ -81,11 +85,11 @@ var Demo = {
             };
             Demo.wsize = 10;
             Demo.screenDirty = true;
+            Demo.t0 = Date.now();
         }, false);
         document.getElementById("btnPlayPause").addEventListener("click", function(event){
             Demo.playing = !Demo.playing;
             this.innerHTML = Demo.playing ? "Stop" : "Play";
-            Demo.t0 = Date.now();
         }, false);
         document.getElementById("btnList").addEventListener("click", function(event){
             alert("function(# args): "+Object.keys(Expression.functionMap).map(function(key){
@@ -96,7 +100,7 @@ var Demo = {
         //insert display into document
         document.getElementById("displayarea").appendChild(Demo.canvas);
         Demo.ctx = Demo.canvas.getContext("2d");
-        Demo.drawGraph(Demo.expr);
+        Demo.drawGraph(Demo.expr.substitute({t: 0}));
 
         //screen refresh
         requestAnimationFrame(function step(){
@@ -133,32 +137,42 @@ var Demo = {
             // Demo.ctx.moveTo(0,0);
             expr.evalInterval(function(i,val,data){
                 Demo.ctx.lineTo(Demo.canvas.width*0.5+i*xscale+xoffset,Demo.canvas.height*0.5-val*yscale+yoffset);
-            }, "x", Demo.graphWindow.x0, Demo.graphWindow.x1+1, 0.1, {});
+            }, "x", Demo.graphWindow.x0, Demo.graphWindow.x1+1, (Demo.graphWindow.x1-Demo.graphWindow.x0)/350, {});
             Demo.ctx.stroke();
         }
 
         //window labels
-        Demo.ctx.shadowBlur = 4;
-        Demo.ctx.shadowOffsetY = 0;
+        //it's a mess, sorry.
+        Demo.ctx.shadowBlur = 1;
+        Demo.ctx.shadowOffsetX = 2;
+        Demo.ctx.shadowOffsetY = 2;
         Demo.ctx.shadowColor = "white";
-        Demo.ctx.fillStyle = "black";
-        Demo.ctx.font = "12pt monospace";
-        var margin = 4;
+        Demo.ctx.fillStyle = "purple";
+        Demo.ctx.font = "bold 12pt monospace";
+        var margin = 32;
+        var width1 = Demo.ctx.measureText((-Demo.graphWindow.y0).toFixed(1)).width,
+            width2 = Demo.ctx.measureText((-Demo.graphWindow.y1).toFixed(1)).width;
         Demo.ctx.textBaseline = "center";
         Demo.ctx.textAlign = "left";
-        Demo.ctx.fillText(Demo.graphWindow.x0.toFixed(1), margin, Demo.canvas.height*0.5);
+        Demo.ctx.fillText("y = "+Demo.expr.originalString, 8, Demo.canvas.height-8);
+        Demo.ctx.fillStyle = "red";
+        Demo.ctx.fillText(Demo.graphWindow.x0.toFixed(1), margin, Math.min(Demo.canvas.height-margin*2,Math.max(14+margin*2,Demo.canvas.height*0.5+yoffset)));
         Demo.ctx.textAlign = "right";
-        Demo.ctx.fillText(Demo.graphWindow.x1.toFixed(1), Demo.canvas.width-margin, Demo.canvas.height*0.5);
-        Demo.ctx.textAlign = "center";
+        Demo.ctx.fillText(Demo.graphWindow.x1.toFixed(1), Demo.canvas.width-margin, Math.min(Demo.canvas.height-margin*2,Math.max(14+margin*2,Demo.canvas.height*0.5+yoffset)));
+        Demo.ctx.textAlign = "left";
         Demo.ctx.textBaseline = "top";
-        Demo.ctx.fillText((-Demo.graphWindow.y0).toFixed(1), Demo.canvas.width*0.5, margin);
+        Demo.ctx.fillStyle = "blue";
+        Demo.ctx.fillText((-Demo.graphWindow.y0).toFixed(1), Math.min(Demo.canvas.width-width1-margin*2, Math.max(margin*2, Demo.canvas.width*0.5+xoffset+8)), margin);
         Demo.ctx.textBaseline = "bottom";
-        Demo.ctx.fillText((-Demo.graphWindow.y1).toFixed(1), Demo.canvas.width*0.5, Demo.canvas.height-margin);
+        Demo.ctx.fillText((-Demo.graphWindow.y1).toFixed(1), Math.min(Demo.canvas.width-width2-margin*2, Math.max(margin*2, Demo.canvas.width*0.5+xoffset+8)), Demo.canvas.height-margin);
         Demo.ctx.shadowBlur = 0;
+        Demo.ctx.shadowOffsetX = 0;
+        Demo.ctx.shadowOffsetY = 0;
     }
-}
+};
 
 window.addEventListener("load", function(){
+    if (document.location.hash) Demo.expr = atob(document.location.hash.substring(1));
     document.getElementById("textbox").value = Demo.expr;
     Demo.expr = new Expression(Demo.expr);
     Demo.init();

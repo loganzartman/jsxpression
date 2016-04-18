@@ -1,9 +1,10 @@
-var Expression = function(str) {
+var Expression = function(str, b) {
 	if (typeof str === "string") {
 		//fix implied multiply
 
 		//parse expression
 		this.tokens = str.match(new RegExp(Expression.regex.token, "g"));
+		this.originalString = this.tokens.join("");
 		if (Expression.DEBUG) console.log("infix: %s", this.tokens);
 		this.tokens = Expression.infixToPostfix(this.tokens);
 		if (Expression.DEBUG) console.log("postfix: %s", this.tokens);
@@ -14,6 +15,7 @@ var Expression = function(str) {
 		str.forEach(function(token){
 			that.tokens.push(token);
 		});
+		if (b) this.originalString = b;
 	}
 };
 Expression.DEBUG = true;
@@ -23,12 +25,13 @@ Expression.DEBUG = true;
  * Each function should explicitly define its arguments (instead of using the arguments object).
  */
 Expression.functionMap = {
+	abs: function(x){return Math.abs(x);},
 	sin: function(x){return Math.sin(x);},
 	cos: function(x){return Math.cos(x);},
 	tan: function(x){return Math.tan(x);},
 	rand: function(){return Math.random();},
-	ln: function(x){return Math.ln(x);},
-	log: function(x){return Math.log(x);},
+	ln: function(x){return Math.log(x);},
+	log: function(x){return Math.log10(x);},
 	logn: function(x,n){return Math.log(x)/Math.log(n);},
 	sqrt: function(x){return Math.sqrt(x);}
 };
@@ -137,6 +140,9 @@ Expression.prototype.eval = function(vars) {
 					case "^":
 						result = Math.pow(left, right);
 						break;
+					case "%":
+						result = left%right;
+						break;
 					case "=":
 						result = (left==right);
 						break;
@@ -156,7 +162,7 @@ Expression.prototype.eval = function(vars) {
  * Returns a duplicate of this.
  */
 Expression.prototype.clone = function() {
-	return new Expression(this.tokens);
+	return new Expression(this.tokens, this.originalString);
 };
 
 /**
@@ -164,10 +170,10 @@ Expression.prototype.clone = function() {
  */
 Expression.regex = {
 	number: "((?:\\d*\\.)?\\d+)",
-	funct: "\\w+(?=\\()",
-	functname: "\\w+",
+	funct: "\\w{2,}(?=\\()",
+	functname: "\\w{2,}", //function names require 2+ characters for now to be distinct from variables
 	variable: "\\w{1}",
-	operator: "[+\\-*^/=]",
+	operator: "[+\\-*%^/=]",
 	parenthesis: "[()]"
 };
 //compile patterns
@@ -183,7 +189,7 @@ Expression.regex = {
 	});
 })();
 
-Expression.precedenceList = ["=","-","+","/","*","^"];
+Expression.precedenceList = ["=","-","+","*","/","%","^"];
 Expression.getPrecedence = function(op) {
 	return Expression.precedenceList.indexOf(op);
 };
