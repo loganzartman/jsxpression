@@ -6,6 +6,7 @@ var Expression = function(str, b) {
 		//parse expression
 		this.tokens = str.match(new RegExp(Expression.regex.token, "g"));
 		this.originalString = this.tokens.join("");
+		this.tokens = Expression.tokenize(this.tokens);
 		if (Expression.DEBUG) console.log("infix: %s", this.tokens);
 		this.tokens = Expression.infixToPostfix(this.tokens);
 		if (Expression.DEBUG) console.log("postfix: %s", this.tokens);
@@ -101,8 +102,9 @@ Expression.prototype.substitute = function(vars) {
 	var expr = this.clone();
 	if (typeof vars === "object") {
 		expr.tokens = expr.tokens.map(function(token){
-			if (vars.hasOwnProperty(token)) {
-				return vars[token];
+			if (vars.hasOwnProperty(token.string)) {
+				token = Expression.tokenize([vars[token.string]])[0];
+				return token;
 			}
 			return token;
 		});
@@ -120,14 +122,14 @@ Expression.prototype.eval = function(vars) {
 	//evaluate postfix expression
 	var stack = [];
 	expr.tokens.forEach(function(token){
-		if (Expression.regex.number.test(token)) {
-			stack.push(parseFloat(token));
+		if (token.type === Token.NUMBER) {
+			stack.push(token.value);
 		}
-		else if (Expression.regex.operator.test(token) || Expression.regex.functname.test(token)) {
+		else if (token.type === Token.OPERATOR || token.type === Token.FUNCTION_NAME) {
 			// if (stack.length < 2) throw new Error("Incomplete expression (not enough operands).");
 			var result = 0;
-			if (Expression.functionMap.hasOwnProperty(token)) {
-				var f = Expression.functionMap[token];
+			if (Expression.functionMap.hasOwnProperty(token.string)) {
+				var f = Expression.functionMap[token.string];
 				var nargs = f.length, args = [];
 				for (var i=0; i<nargs; i++) args.push(stack.pop());
 				result = f.apply(this, args);
@@ -135,7 +137,7 @@ Expression.prototype.eval = function(vars) {
 			else { //operator
 				var right = stack.pop();
 				var left = stack.pop();
-				switch (token) {
+				switch (token.string) {
 					case "-":
 						result = left-right;
 						break;
@@ -161,7 +163,7 @@ Expression.prototype.eval = function(vars) {
 			}
             stack.push(result);
 		}
-		else if (Expression.regex.variable.test(token)) {
+		else if (token.type === Token.VARIABLE) {
 			throw new Error("Symbolic operations not yet supported.");
 		}
 	});
@@ -180,7 +182,7 @@ Expression.prototype.clone = function() {
  * Contains patterns that match various types of tokens.
  */
 Expression.regex = {
-	number: "(?:(?:\\d*\\.)?\\d+)",
+	number: "(?:-{0,1}(?:\\d*\\.)?\\d+)",
 	funct: "\\w{2,}(?=\\()",
 	functname: "\\w{2,}", //function names require 2+ characters for now to be distinct from variables
 	variable: "\\w{1}",
@@ -205,7 +207,48 @@ Expression.regex = {
 
 Expression.precedenceList = ["=","-","+","*","/","%","^"];
 Expression.getPrecedence = function(op) {
-	return Expression.precedenceList.indexOf(op);
+	return Expression.precedenceList.indexOf(op.string);
+};
+
+var Token = {
+	NUMBER: 0,
+	VARIABLE: 1,
+	FUNCTION_NAME: 2,
+	ARG_SEPARATOR: 3,
+	OPERATOR: 4,
+	PAREN_OPEN: 5,
+	PAREN_CLOSE: 6
+};
+Expression.tokenize = function(strings) {
+	var tokens = [];
+	var tokenizeSingle = function(string){
+		string = ""+string;
+		var type = null;
+		var value = string;
+		if (Expression.regex.number.is(string)) {
+			type = Token.NUMBER;
+			value = parseFloat(string);
+		}
+		else if (Expression.regex.variable.is(string)) type = Token.VARIABLE;
+		else if (Expression.regex.functname.is(string)) type = Token.FUNCTION_NAME;
+		else if (string === ",") type = Token.ARG_SEPARATOR;
+		else if (Expression.regex.operator.is(string)) type = Token.OPERATOR;
+		else if (string === "(") type = Token.PAREN_OPEN;
+		else if (string === ")") type = Token.PAREN_CLOSE;
+		tokens.push({
+			"type": type,
+			"string": string,
+			"value": value
+		});
+	};
+	if (strings instanceof Array) {
+		strings.forEach(tokenizeSingle);
+		return tokens;
+	}
+	else {
+		tokenizeSingle(strings);
+		return tokens[0];
+	}
 };
 
 /**
@@ -217,16 +260,16 @@ Expression.infixToPostfix = function(infixTokens) {
 	var output = [], opstack = [];
 	for (var i=0; i<infixTokens.length; i++) {
 		var token = infixTokens[i];
-		if (Expression.regex.number.is(token) || Expression.regex.variable.is(token)) {
+		if (token.type === Token.NUMBER || token.type === Token.VARIABLE) {
 			output.push(token);
 		}
-		else if (Expression.regex.functname.is(token)) {
+		else if (token.type === Token.FUNCTION_NAME) {
 			opstack.push(token);
 		}
-		else if (token === ",") {
+		else if (token.type === Token.ARG_SEPARATOR) {
 			var found = false;
 			while (opstack.length > 0) {
-				if (opstack[opstack.length-1] === "(") {
+				if (opstack[opstack.length-1].type === Token.PAREN_OPEN) {
 					found = true;
 					break;
 				}
@@ -234,10 +277,10 @@ Expression.infixToPostfix = function(infixTokens) {
 			}
 			if (!found) throw new Error("Mismatched parenthesis in function.");
 		}
-		else if (Expression.regex.operator.is(token)) {
+		else if (token.type === Token.OPERATOR) {
 			while (opstack.length > 0) {
 				var nextOp = opstack[opstack.length-1];
-				if (token === "=" || token === "^") {
+				if (token.string === "=" || token.string === "^") {
 					if (Expression.getPrecedence(token) < Expression.getPrecedence(nextOp)) {
 						output.push(opstack.pop());
 					}
@@ -254,16 +297,16 @@ Expression.infixToPostfix = function(infixTokens) {
 			}
 			opstack.push(token);
 		}
-		else if (token === "(") {
+		else if (token.type === Token.PAREN_OPEN) {
 			opstack.push(token);
 		}
-		else if (token === ")") {
+		else if (token.type === Token.PAREN_CLOSE) {
 			var found = false;
 			while (opstack.length > 0) {
-				if (opstack[opstack.length-1] === "(") {
+				if (opstack[opstack.length-1].type === Token.PAREN_OPEN) {
 					found = true;
 					opstack.pop();
-					if (Expression.regex.functname.is(opstack[opstack.length-1])) {
+					if (opstack[opstack.length-1].type === Token.FUNCTION_NAME) {
 						output.push(opstack.pop());
 					}
 					break;
@@ -272,10 +315,10 @@ Expression.infixToPostfix = function(infixTokens) {
 			}
 			if (!found) throw new Error("Mismatched parenthesis.");
 		}
-	};
+	}
 	while (opstack.length > 0) {
 		var op = opstack.pop();
-		if (op === "(") throw new Error("Mismatched parenthesis.");
+		if (op.type === Token.PAREN_OPEN) throw new Error("Mismatched parenthesis.");
 		output.push(op);
 	}
 	return output;
