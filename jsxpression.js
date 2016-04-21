@@ -120,10 +120,10 @@ Expression.prototype.eval = function(vars) {
 	//evaluate postfix expression
 	var stack = [];
 	expr.tokens.forEach(function(token){
-		if (Expression.regex.number.test(token)) {
-			stack.push(parseFloat(token));
+		if (typeof token === "number") {
+			stack.push(token);
 		}
-		else if (Expression.regex.operator.test(token) || Expression.regex.functname.test(token)) {
+		else if (Expression.isOperator(token) || Expression.isFunctName(token)) {
 			// if (stack.length < 2) throw new Error("Incomplete expression (not enough operands).");
 			var result = 0;
 			if (Expression.functionMap.hasOwnProperty(token)) {
@@ -208,6 +208,20 @@ Expression.getPrecedence = function(op) {
 	return Expression.precedenceList.indexOf(op);
 };
 
+Expression.isOperator = function(str) {
+	return str === "+" ||
+		   str === "-" ||
+		   str === "*" ||
+		   str === "/" ||
+		   str === "^" ||
+		   str === "=" ||
+		   str === "%";
+};
+Expression.isFunctName = function(str) {
+	if (str.length < 2) return false;
+	return true;
+};
+
 /**
  * Used internally to convert list of tokens from infix to postfix notation.
  */
@@ -217,7 +231,10 @@ Expression.infixToPostfix = function(infixTokens) {
 	var output = [], opstack = [];
 	for (var i=0; i<infixTokens.length; i++) {
 		var token = infixTokens[i];
-		if (Expression.regex.number.is(token) || Expression.regex.variable.is(token)) {
+		if (Expression.regex.number.is(token)) {
+			output.push(parseFloat(token));
+		}
+		else if (Expression.regex.variable.is(token)) {
 			output.push(token);
 		}
 		else if (Expression.regex.functname.is(token)) {

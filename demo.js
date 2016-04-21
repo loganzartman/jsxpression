@@ -63,7 +63,7 @@ var Demo = {
         Demo.canvas.addEventListener("DOMMouseScroll", scrl, false);
 
         //controls
-        document.getElementById("btnStore").addEventListener("click", function(){
+        var storefunc = function(){
             try {
                 var val = document.getElementById("textbox").value;
                 var expr = new Expression(val);
@@ -75,6 +75,11 @@ var Demo = {
             catch (e) {
                 alert("There was a problem parsing your expression.\n" + e);
             }
+        };
+        document.getElementById("btnStore").addEventListener("click", storefunc, false);
+        document.addEventListener("keypress", function(event){
+            if (event.keyCode === 13)
+                storefunc();
         }, false);
         document.getElementById("btnReset").addEventListener("click", function(){
             Demo.graphWindow = {
