@@ -92,9 +92,9 @@ var Demo = {
             this.innerHTML = Demo.playing ? "Stop" : "Play";
         }, false);
         document.getElementById("btnList").addEventListener("click", function(event){
-            alert("function(# args): "+Object.keys(Expression.functionMap).map(function(key){
-                return key + "(" + Expression.functionMap[key].length + ")";
-            }).join(", "));
+            alert("function(# args): \n"+Object.keys(Expression.functionMap).sort().map(function(key){
+                return key + "(" + Expression.functionMap[key].length + ")\n";
+            }).join(""));
         }, false);
 
         //insert display into document

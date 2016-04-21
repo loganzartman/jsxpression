@@ -30,11 +30,21 @@ Expression.functionMap = {
 	sin: function(x){return Math.sin(x);},
 	cos: function(x){return Math.cos(x);},
 	tan: function(x){return Math.tan(x);},
+	asin: function(x){return Math.asin(x);},
+	acos: function(x){return Math.acos(x);},
+	atan: function(x){return Math.atan(x);},
+	sec: function(x){return 1/Math.cos(x);},
+	csc: function(x){return 1/Math.sin(x);},
+	cot: function(x){return 1/Math.tan(x);},
+	ceil: function(x){return Math.ceil(x);},
+	round: function(x){return Math.round(x);},
+	floor: function(x){return Math.floor(x);},
 	rand: function(){return Math.random();},
 	ln: function(x){return Math.log(x);},
 	log: function(x){return Math.log10(x);},
 	logn: function(x,n){return Math.log(x)/Math.log(n);},
-	sqrt: function(x){return Math.sqrt(x);}
+	sqrt: function(x){return Math.sqrt(x);},
+	sign: function(x){return Math.sign(x);}
 };
 
 /**
