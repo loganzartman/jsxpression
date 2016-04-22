@@ -140,8 +140,17 @@ var Demo = {
             Demo.ctx.strokeStyle = "black";
             Demo.ctx.beginPath();
             // Demo.ctx.moveTo(0,0);
+            var sign = 0;
             expr.evalInterval(function(i,val,data){
                 Demo.ctx.lineTo(Demo.canvas.width*0.5+i*xscale+xoffset,Demo.canvas.height*0.5-val*yscale+yoffset);
+                var newsign = Math.sign(val);
+                if (sign !== 0) {
+                    if (sign !== newsign) {
+                        Demo.ctx.fillStyle = "blue";
+                        Demo.ctx.fillRect(Demo.canvas.width*0.5+i*xscale+xoffset,Demo.canvas.height*0.5-val*yscale+yoffset,4,4);
+                    }
+                }
+                sign = newsign;
             }, "x", Demo.graphWindow.x0, Demo.graphWindow.x1+1, (Demo.graphWindow.x1-Demo.graphWindow.x0)/350, {});
             Demo.ctx.stroke();
         }
