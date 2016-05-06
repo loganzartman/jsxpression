@@ -12,6 +12,14 @@ var Demo = {
     t: 0,
 
     init: function() {
+        try {
+            Tests.unitTests();
+        }
+        catch (e) {
+            alert("Failed unit tests.\nSee console for details.");
+            console.log(e);
+        }
+
         Demo.canvas = document.createElement("canvas");
         Demo.canvas.width = 700;
         Demo.canvas.height = 700;
@@ -140,19 +148,20 @@ var Demo = {
             Demo.ctx.strokeStyle = "black";
             Demo.ctx.beginPath();
             // Demo.ctx.moveTo(0,0);
-            var sign = 0;
+            var x,y,px,py;
             expr.evalInterval(function(i,val,data){
-                Demo.ctx.lineTo(Demo.canvas.width*0.5+i*xscale+xoffset,Demo.canvas.height*0.5-val*yscale+yoffset);
-                var newsign = Math.sign(val);
-                if (sign !== 0) {
-                    if (sign !== newsign) {
-                        Demo.ctx.fillStyle = "blue";
-                        Demo.ctx.fillRect(Demo.canvas.width*0.5+i*xscale+xoffset,Demo.canvas.height*0.5-val*yscale+yoffset,4,4);
-                    }
-                }
-                sign = newsign;
+                Demo.ctx.beginPath();
+                x = Demo.canvas.width*0.5+i*xscale+xoffset;
+                y = Demo.canvas.height*0.5-val*yscale+yoffset;
+                var c = 1-Math.abs((y - py) / (200));
+                Demo.ctx.strokeStyle = "rgba(0,0,0,"+c+")";
+                Demo.ctx.moveTo(px,py);
+                Demo.ctx.lineTo(x,y);
+                px = x;
+                py = y;
+                Demo.ctx.stroke();
             }, "x", Demo.graphWindow.x0, Demo.graphWindow.x1+1, (Demo.graphWindow.x1-Demo.graphWindow.x0)/350, {});
-            Demo.ctx.stroke();
+            // Demo.ctx.stroke();
         }
 
         //window labels

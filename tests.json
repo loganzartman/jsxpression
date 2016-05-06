@@ -1,0 +1,41 @@
+{
+	"all": [
+		{
+			"name": "eval0: addition",
+			"mode": "eval",
+			"expr": "x+y+z",
+			"sub": {
+				"x": 1,
+				"y": 3,
+				"z": 5
+			},
+			"expected": 9
+		},
+		{
+			"name": "eval1: order of ops",
+			"mode": "eval",
+			"expr": "x+y*z^w-v",
+			"sub": {
+				"v": 7,
+				"w": 13,
+				"x": 23,
+				"y": 3,
+				"z": 5
+			},
+			"expected": 91
+		},
+		{
+			"name": "eval2: functions",
+			"mode": "eval",
+			"expr": "x+y*z^w-v",
+			"sub": {
+				"v": 7,
+				"w": 13,
+				"x": 23,
+				"y": 3,
+				"z": 5
+			},
+			"expected": 91
+		}
+	]
+}

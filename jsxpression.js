@@ -31,7 +31,7 @@ Expression.regex = {
 	number: "(?:(?:\\d*\\.)?\\d+)",
 	funct: "\\w{2,}(?=\\()",
 	functname: "\\w{2,}", //function names require 2+ characters for now to be distinct from variables
-	variable: "\\w{1}",
+	variable: "[a-z]{1}",
 	operator: "[+\\-*%^/=<>]",
 	parenthesis: "[()]"
 };
@@ -76,8 +76,7 @@ Expression.functionMap = {
 	sqrt: function(x){return Math.sqrt(x);},
 	sign: function(x){return Math.sign(x);},
 	max: function(x,y){return Math.max(x,y);},
-	min: function(x,y){return Math.min(x,y);},
-	iff: function(c,t,f){return c?t:f;}
+	min: function(x,y){return Math.min(x,y);}
 };
 
 /**
@@ -97,14 +96,14 @@ Expression.prototype.evalInterval = function(func, variable, low, high, step) {
 /**
  * Solves an expression of a single variable for f(x) = 0.
  * Uses the bracketing method, which assumes that the function is continuous.
- * The interval given should contain only one zero.
+ * The interval given should contain ONLY ONE ZERO. Use nsolven if this is an issue.
  * @param {string} variable variable to solve for
  * @param {number} iterations max iterations before stopping (higher => more accuracy)
  * @param {number} low lower bound of interval
  * @param {number} high upper bound of interval
  * @return {number} approximate solution
  */
-Expression.prototype.nsolveIntv = function(variable, iterations, low, high) {
+Expression.prototype.nsolve = function(variable, iterations, low, high) {
 	var x1 = low,
 		x2 = high,
 		x3 = (x1+x2)*0.5;
@@ -119,6 +118,63 @@ Expression.prototype.nsolveIntv = function(variable, iterations, low, high) {
 		x3 = (x1+x2)*0.5;
 	}
 	return x3;
+};
+
+/**
+ * A (usually) faster version of nsolve implemented using Netwon's Method.
+ * Does not require an interval to be supplied.
+ * More effective when an accurate guess is supplied.
+ * @param {string} variable variable to solve for
+ * @param {number} guess optional predicted solution
+ * @param {number} iterations max iterations before stopping (higher => more accuracy)
+ * @return {number} approximate solution
+ */
+Expression.prototype.nsolven = function(variable, guess, iterations) {
+	if (typeof guess === "undefined") guess = 0;
+	if (typeof iterations === "undefined") iterations = 50;
+	var tol = 1e-8;
+	for (var i=0; i<iterations; i++) {
+		var dx = this.nderiv(variable, guess, tol);
+		if (isNaN(1/dx)) { //oh hell yes
+			tol *= 10;
+			continue;
+		}
+		guess -= this.eval(variable, guess) / dx;
+	}
+	return guess;
+};
+
+/**
+ * Returns the (numerical) limit of a function as a variable approaches a given value.
+ * @param {string} variable
+ * @param {number} approaches value to approach
+ * @param {number} tol optional tolerance value
+ * @return {number} limit
+ */
+Expression.prototype.nlim = function(variable, approaches, tol) {
+	if (typeof tol === "undefined") tol = 1e-5;
+	var expr = this;
+	var lim = function(v, x, sign) {
+		var ox = sign * 1e-8;
+		return expr.eval(v, x+ox);
+	};
+	var llim = lim(variable, approaches, 1);
+	var rlim = lim(variable, approaches, -1);
+	if (Math.abs(llim - rlim) < tol) return (llim+rlim)*0.5;
+	return undefined;
+};
+
+/**
+ * Returns the (numerical) derivative of a function.
+ * @param {string} variable take derivative with respect to this variable
+ * @param {number} x take derivative at this value of variable
+ * @return {number} the numerical derivative at a point
+ */
+Expression.prototype.nderiv = function(variable, x, limitTol) {
+	var d = new Expression("(a-b)/h");
+	d = d.subSymbolic("a", this.subSymbolic("x", new Expression("x+h")));
+	d = d.subSymbolic("b", this);
+	return d.substitute(variable, x).nlim("h", 0, limitTol);
 };
 
 /**
@@ -143,6 +199,27 @@ Expression.prototype.substitute = function(vars) {
 		});
 	}
 	return expr;
+};
+
+/**
+ * Replaces all instances of a single variable with an arbitrary expression.
+ * @param {string} variable the token to replace
+ * @param {Expression} expr the expression to insert
+ * @return {Expression} new expression with substitutions made
+ */
+Expression.prototype.subSymbolic = function(variable, expr) {
+	var out = [];
+	this.tokens.forEach(function(token){
+		if (token === variable) {
+			expr.tokens.forEach(function(itoken){
+				out.push(itoken);
+			});
+		}
+		else {
+			out.push(token);
+		}
+	});
+	return new Expression(out);
 };
 
 /**
